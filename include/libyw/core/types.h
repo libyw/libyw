@@ -8,6 +8,8 @@
 #define YW_NODISCARD [[nodiscard]]
 #define YW_INLINE static inline
 
+typedef uint32_t yw_mode_t;
+
 typedef enum : int32_t {
     YW_SUCCESS = 0,
     YW_ERR_INVALID_ARGUMENT = -1,

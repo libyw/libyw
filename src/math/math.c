@@ -3,31 +3,39 @@
 #define YW_PI          3.14159265358979323846
 #define YW_TWO_PI      6.28318530717958647692
 #define YW_HALF_PI     1.57079632679489661923
+#define YW_INV_TWO_PI  0.159154943091895335768
 
-#define YW_PI_F        3.14159265358979323846f
-#define YW_TWO_PI_F    6.28318530717958647692f
-#define YW_HALF_PI_F   1.57079632679489661923f
+#define YW_PI_F         3.14159265358979323846f
+#define YW_TWO_PI_F     6.28318530717958647692f
+#define YW_HALF_PI_F    1.57079632679489661923f
+#define YW_INV_TWO_PI_F 0.159154943091895335768f
+
+static const float S_COEFF_F[] = {
+    1.0f,
+   -0.166666666416265235595f,
+    0.0083333318073862412854f,
+   -0.0001984090023707833621f,
+    0.000002752600208985165f
+};
 
 static float normalize_radians_f(float x) {
-    while (x > YW_PI_F)  x -= YW_TWO_PI_F;
-    while (x < -YW_PI_F) x += YW_TWO_PI_F;
-    return x;
+    float k = (float)(int)(x * YW_INV_TWO_PI_F + (x >= 0.0f ? 0.5f : -0.5f));
+    return x - k * YW_TWO_PI_F;
 }
 
 float yw_math_sinf(float x) {
     x = normalize_radians_f(x);
 
-    float x2 = x * x;
-    float x3 = x2 * x;
-    float x5 = x3 * x2;
-    float x7 = x5 * x2;
-    float x9 = x7 * x2;
+    if (x > YW_HALF_PI_F) {
+        x = YW_PI_F - x;
+    } else if (x < -YW_HALF_PI_F) {
+        x = -YW_PI_F - x;
+    }
 
-    return x 
-         - (x3 / 6.0f) 
-         + (x5 / 120.0f) 
-         - (x7 / 5040.0f) 
-         + (x9 / 362880.0f);
+    float x2 = x * x;
+    float poly = S_COEFF_F[0] + x2 * (S_COEFF_F[1] + x2 * (S_COEFF_F[2] + x2 * (S_COEFF_F[3] + x2 * S_COEFF_F[4])));
+
+    return x * poly;
 }
 
 float yw_math_cosf(float x) {
@@ -50,10 +58,9 @@ float yw_math_sqrtf(float x) {
 }
 
 yw_sincosf_result yw_math_sincosf(float x) {
-    return (yw_sincosf_result){
-        .sin = yw_math_sinf(x),
-        .cos = yw_math_cosf(x)
-    };
+    float s = yw_math_sinf(x);
+    float c = yw_math_cosf(x);
+    return (yw_sincosf_result){ .sin = s, .cos = c };
 }
 
 yw_frexpf_result yw_math_frexpf(float x) {
@@ -64,8 +71,8 @@ yw_frexpf_result yw_math_frexpf(float x) {
     uint32_t bits = yw_float_to_bits(x);
     int32_t exp = (int32_t)((bits >> 23) & 0xFF) - 127;
 
-    if (exp == -127) {
-        return (yw_frexpf_result){ .fraction = 0.0f, .exponent = 0 };
+    if ((bits & 0x7FFFFFFF) == 0) {
+        return (yw_frexpf_result){ .fraction = x, .exponent = 0 };
     }
 
     bits = (bits & 0x807FFFFFu) | (126u << 23);
@@ -77,29 +84,21 @@ yw_frexpf_result yw_math_frexpf(float x) {
 }
 
 static double normalize_radians(double x) {
-    while (x > YW_PI)  x -= YW_TWO_PI;
-    while (x < -YW_PI) x += YW_TWO_PI;
-    return x;
+    double k = (double)(int64_t)(x * YW_INV_TWO_PI + (x >= 0.0 ? 0.5 : -0.5));
+    return x - k * YW_TWO_PI;
 }
 
 double yw_math_sin(double x) {
     x = normalize_radians(x);
 
-    double x2 = x * x;
-    double x3 = x2 * x;
-    double x5 = x3 * x2;
-    double x7 = x5 * x2;
-    double x9 = x7 * x2;
-    double x11 = x9 * x2;
-    double x13 = x11 * x2;
+    if (x > YW_HALF_PI) {
+        x = YW_PI - x;
+    } else if (x < -YW_HALF_PI) {
+        x = -YW_PI - x;
+    }
 
-    return x 
-         - (x3 / 6.0) 
-         + (x5 / 120.0) 
-         - (x7 / 5040.0) 
-         + (x9 / 362880.0) 
-         - (x11 / 39916800.0) 
-         + (x13 / 6227020800.0);
+    double x2 = x * x;
+    return x * (1.0 + x2 * (-1.0/6.0 + x2 * (1.0/120.0 + x2 * (-1.0/5040.0 + x2 * (1.0/362880.0 + x2 * (-1.0/39916800.0 + x2 * (1.0/6227020800.0)))))));
 }
 
 double yw_math_cos(double x) {
@@ -146,19 +145,31 @@ yw_frexp_result yw_math_frexp(double x) {
 }
 
 yw_f32x4 yw_vec_sinf(yw_f32x4 v) {
-    return (yw_f32x4){
-        yw_math_sinf(v[0]),
-        yw_math_sinf(v[1]),
-        yw_math_sinf(v[2]),
-        yw_math_sinf(v[3])
-    };
+    yw_f32x4 x = v;
+    for (int i = 0; i < 4; ++i) {
+        x[i] = normalize_radians_f(v[i]);
+        if (x[i] > YW_HALF_PI_F)       x[i] = YW_PI_F - x[i];
+        else if (x[i] < -YW_HALF_PI_F) x[i] = -YW_PI_F - x[i];
+    }
+
+    yw_f32x4 x2 = x * x;
+    yw_f32x4 poly = S_COEFF_F[0] 
+                  + x2 * (S_COEFF_F[1] 
+                  + x2 * (S_COEFF_F[2] 
+                  + x2 * (S_COEFF_F[3] 
+                  + x2 * S_COEFF_F[4])));
+
+    return x * poly;
+}
+
+yw_f32x4 yw_vec_cosf(yw_f32x4 v) {
+    return yw_vec_sinf(v + (yw_f32x4){ YW_HALF_PI_F, YW_HALF_PI_F, YW_HALF_PI_F, YW_HALF_PI_F });
 }
 
 yw_f32x4 yw_vec_sqrtf(yw_f32x4 v) {
-    return (yw_f32x4){
-        yw_math_sqrtf(v[0]),
-        yw_math_sqrtf(v[1]),
-        yw_math_sqrtf(v[2]),
-        yw_math_sqrtf(v[3])
-    };
+    yw_f32x4 res;
+    for (int i = 0; i < 4; ++i) {
+        res[i] = yw_math_sqrtf(v[i]);
+    }
+    return res;
 }

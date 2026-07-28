@@ -6,16 +6,23 @@ yw_allocator* yw_allocator_system(void) {
 }
 #else
 
-#include "sys/sys_linux.h"
+#include "libyw/sys/sys.h"
+
+YW_INLINE size_t align_up(size_t size, size_t align) {
+    return (size + align - 1) & ~(align - 1);
+}
 
 static void* system_alloc_impl(yw_allocator* self, size_t size, size_t alignment) {
     (void)self;
-    (void)alignment;
-
     if (size == 0) return nullptr;
 
-    size_t total_size = size + sizeof(size_t);
-    
+    if (alignment < 16) {
+        alignment = 16;
+    }
+
+    size_t header_size = align_up(sizeof(size_t), alignment);
+    size_t total_size  = size + header_size;
+
     void* ptr = yw_sys_mmap(
         nullptr, 
         total_size, 
@@ -27,8 +34,11 @@ static void* system_alloc_impl(yw_allocator* self, size_t size, size_t alignment
 
     if (ptr == nullptr) return nullptr;
 
-    *(size_t*)ptr = total_size;
-    return (void*)((unsigned char*)ptr + sizeof(size_t));
+    void* user_ptr = (void*)((unsigned char*)ptr + header_size);
+    *((size_t*)user_ptr - 1) = total_size;
+    *((size_t*)user_ptr - 2) = header_size;
+
+    return user_ptr;
 }
 
 static void system_dealloc_impl(yw_allocator* self, void* ptr, size_t size) {
@@ -36,8 +46,10 @@ static void system_dealloc_impl(yw_allocator* self, void* ptr, size_t size) {
     (void)size;
     if (ptr == nullptr) return;
 
-    void* real_ptr = (unsigned char*)ptr - sizeof(size_t);
-    size_t total_size = *(size_t*)real_ptr;
+    size_t total_size  = *((size_t*)ptr - 1);
+    size_t header_size = *((size_t*)ptr - 2);
+
+    void* real_ptr = (unsigned char*)ptr - header_size;
 
     yw_sys_munmap(real_ptr, total_size);
 }
