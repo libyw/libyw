@@ -4,8 +4,8 @@
  * : ABI: x86_64                        :
  */
 
-#ifndef LIBYW_SYS_LINUX_H
-#define LIBYW_SYS_LINUX_H
+#ifndef LIBYW_SYS_LINUX_X86_64_H
+#define LIBYW_SYS_LINUX_X86_64_H
 
 #include "libyw/core/types.h"
 #include "libyw/sys/stat.h"
@@ -126,7 +126,7 @@ YW_INLINE int yw_sys_munmap(void* addr, size_t length) {
     return (int)ret;
 }
 
-[[noreturn]]
+YW_NORETURN
 YW_INLINE void yw_sys_exit(int status) {
     __asm__ __volatile__(
         "syscall"
@@ -198,4 +198,4 @@ YW_INLINE int yw_sys_chmod(const char *filename, yw_mode_t mode) {
     return (int)ret;
 }
 
-#endif // LIBYW_SYS_LINUX_H
+#endif // LIBYW_SYS_LINUX_X86_64_H

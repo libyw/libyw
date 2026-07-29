@@ -56,6 +56,7 @@ YW_INLINE void yw_panic(const char* msg, const char* file, int line) {
         return r;                                 \
     }
 
+#if defined(__GNUC__) || defined(__clang__)
 #define RESULT_UNWRAP(res, msg) __extension__ ({  \
     __typeof__(res) _res = (res);                 \
     if (_res.status != YW_RESULT_SUCCESS) {       \
@@ -63,6 +64,10 @@ YW_INLINE void yw_panic(const char* msg, const char* file, int line) {
     }                                             \
     _res.as.value;                                \
 })
+#else
+#define RESULT_UNWRAP(res, msg) \
+    (((res).status == YW_RESULT_SUCCESS) ? (res).as.value : (yw_panic((msg), __FILE__, __LINE__), (res).as.value))
+#endif
 
 RESULT_DEFINE(IntResult, int, const char*)
 RESULT_DEFINE(SizeResult, size_t, const char*)

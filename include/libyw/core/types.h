@@ -5,12 +5,41 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define YW_NODISCARD [[nodiscard]]
 #define YW_INLINE static inline
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+    #define YW_IS_C23 1
+#else
+    #define YW_IS_C23 0
+#endif
+
+#if YW_IS_C23
+    #define YW_NODISCARD [[nodiscard]]
+    #define YW_NORETURN  [[noreturn]]
+#else
+    #ifndef nullptr
+        #define nullptr NULL
+    #endif
+
+    #if defined(__GNUC__) || defined(__clang__)
+        #define YW_NODISCARD __attribute__((warn_unused_result))
+        #define YW_NORETURN  __attribute__((noreturn))
+    #elif defined(_MSC_VER)
+        #define YW_NODISCARD _Check_return_
+        #define YW_NORETURN  __declspec(noreturn)
+    #else
+        #define YW_NODISCARD
+        #define YW_NORETURN
+    #endif
+#endif
 
 typedef uint32_t yw_mode_t;
 
-typedef enum : int32_t {
+typedef enum 
+#if YW_IS_C23
+ : int32_t 
+#endif 
+{
     YW_SUCCESS = 0,
     YW_ERR_INVALID_ARGUMENT = -1,
     YW_ERR_OUT_OF_BOUNDS   = -2,
