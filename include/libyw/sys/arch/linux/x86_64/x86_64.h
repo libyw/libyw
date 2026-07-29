@@ -7,24 +7,23 @@
 #ifndef LIBYW_SYS_LINUX_H
 #define LIBYW_SYS_LINUX_H
 
-#if defined(__INTELLISENSE__)
-#define YW_REGISTER
-#else
-#define YW_REGISTER register
-#endif
-
 #include "libyw/core/types.h"
 #include "libyw/sys/stat.h"
 
 // System Call Numbers
-#define YW_SYS_READ    0
-#define YW_SYS_WRITE   1
-#define YW_SYS_OPEN    2
-#define YW_SYS_CLOSE   3
-#define YW_SYS_STAT    4
-#define YW_SYS_MMAP    9
-#define YW_SYS_MUNMAP 11
-#define YW_SYS_EXIT   60
+#define YW_SYS_READ                0
+#define YW_SYS_WRITE               1
+#define YW_SYS_OPEN                2
+#define YW_SYS_CLOSE               3
+#define YW_SYS_STAT                4
+#define YW_SYS_MMAP                9
+#define YW_SYS_MUNMAP             11
+#define YW_SYS_EXIT               60
+#define YW_SYS_KILL               62
+#define YW_SYS_MKDIR              83
+#define YW_SYS_RMDIR              84
+#define YW_SYS_CHMOD              90
+#define YW_SYS_CLOCK_GETTIME     228
 
 // Flags & Constants
 // mmap flags
@@ -127,6 +126,7 @@ YW_INLINE int yw_sys_munmap(void* addr, size_t length) {
     return (int)ret;
 }
 
+[[noreturn]]
 YW_INLINE void yw_sys_exit(int status) {
     __asm__ __volatile__(
         "syscall"
@@ -134,6 +134,68 @@ YW_INLINE void yw_sys_exit(int status) {
         : "a"(YW_SYS_EXIT), "D"((long)status)
         : "rcx", "r11", "memory"
     );
+    __builtin_unreachable();
+}
+
+YW_INLINE int yw_sys_kill(int pid, int sig) {
+    long ret;
+    __asm__ __volatile__(
+        "syscall"
+        : "=a"(ret)
+        : "a"(YW_SYS_KILL), "D"(pid), "S"(sig)
+        : "rcx", "r11", "memory"
+    );
+    return (int)ret;
+}
+
+YW_INLINE int yw_sys_mkdir(const char* pathname, yw_mode_t mode) {
+    long ret;
+    __asm__ __volatile__(
+        "syscall"
+        : "=a"(ret)
+        : "a"(YW_SYS_MKDIR), "D"(pathname), "S"(mode)
+        : "rcx", "r11", "memory"
+    );
+    return (int)ret;
+}
+
+YW_INLINE int yw_sys_rmdir(const char *pathname) {
+    long ret;
+    __asm__ __volatile__(
+        "syscall"
+        : "=a"(ret)
+        : "a"(YW_SYS_RMDIR), "D"(pathname)
+        : "rcx", "r11", "memory"
+    );
+    return (int)ret;
+}
+
+typedef struct {
+    long tv_sec;
+    long tv_nsec;
+} yw_timespec_t;
+
+
+YW_INLINE int yw_sys_gettime(const int which_clock, yw_timespec_t *tp) {
+    long ret;
+    __asm__ __volatile__(
+        "syscall"
+        : "=a"(ret)
+        : "a"(YW_SYS_CLOCK_GETTIME), "D"((long)which_clock), "S"(tp)
+        : "rcx", "r11", "memory"
+    );
+    return (int)ret;
+}
+
+YW_INLINE int yw_sys_chmod(const char *filename, yw_mode_t mode) {
+    long ret;
+    __asm__ __volatile__(
+        "syscall"
+        : "=a"(ret)
+        : "a"(YW_SYS_CHMOD), "D"(filename), "S"(mode)
+        : "rcx", "r11", "memory"
+    );
+    return (int)ret;
 }
 
 #endif // LIBYW_SYS_LINUX_H

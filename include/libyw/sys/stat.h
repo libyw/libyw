@@ -30,6 +30,25 @@ typedef struct yw_stat {
     uint64_t st_dev;
     uint64_t st_ino;
     uint32_t st_mode;
+    uint32_t st_nlink;
+    uint32_t st_uid;
+    uint32_t st_gid;
+    uint64_t st_rdev;
+    uint64_t __pad1;
+    int64_t  st_size;
+    int32_t  st_blksize;
+    int32_t  __pad2;
+    int64_t  st_blocks;
+
+    int64_t  st_atime_sec;
+    uint64_t st_atime_nsec;
+    int64_t  st_mtime_sec;
+    uint64_t st_mtime_nsec;
+    int64_t  st_ctime_sec;
+    uint64_t st_ctime_nsec;
+    
+    uint32_t __unused4;
+    uint32_t __unused5;
 } yw_stat;
 #else
 #error "Unsupported architecture"

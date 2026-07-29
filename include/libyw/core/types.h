@@ -31,4 +31,10 @@ YW_INLINE yw_option_ptr yw_none_ptr(void) {
     return (yw_option_ptr){ .value = nullptr, .has_value = false };
 }
 
+#if defined(__INTELLISENSE__)
+#define YW_REGISTER
+#else
+#define YW_REGISTER register
+#endif
+
 #endif // LIBYW_CORE_TYPES_H

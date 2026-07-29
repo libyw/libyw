@@ -7,8 +7,16 @@
 extern "C" {
 #endif
 
-#define YW_MATH_PI          3.14159265358979323846
-#define YW_MATH_PI_F        3.14159265358979323846f
+#define YW_PI          3.14159265358979323846
+#define YW_TWO_PI      6.28318530717958647692
+#define YW_HALF_PI     1.57079632679489661923
+#define YW_INV_TWO_PI  0.159154943091895335768
+
+#define YW_PI_F         3.14159265358979323846f
+#define YW_TWO_PI_F     6.28318530717958647692f
+#define YW_HALF_PI_F    1.57079632679489661923f
+#define YW_INV_TWO_PI_F 0.159154943091895335768f
+
 #define YW_MATH_E           2.71828182845904523536
 #define YW_MATH_SQRT2       1.41421356237309504880
 
@@ -49,6 +57,7 @@ YW_NODISCARD yw_sincos_result yw_math_sincos(double x);
 YW_NODISCARD yw_frexp_result yw_math_frexp(double x);
 
 YW_NODISCARD yw_f32x4 yw_vec_sinf(yw_f32x4 v);
+YW_NODISCARD yw_f32x4 yw_vec_cosf(yw_f32x4 v);
 YW_NODISCARD yw_f32x4 yw_vec_sqrtf(yw_f32x4 v);
 
 #define yw_sin(x) _Generic((x), \

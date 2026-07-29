@@ -1,14 +1,6 @@
 #include "libyw/math.h"
 
-#define YW_PI          3.14159265358979323846
-#define YW_TWO_PI      6.28318530717958647692
-#define YW_HALF_PI     1.57079632679489661923
-#define YW_INV_TWO_PI  0.159154943091895335768
-
-#define YW_PI_F         3.14159265358979323846f
-#define YW_TWO_PI_F     6.28318530717958647692f
-#define YW_HALF_PI_F    1.57079632679489661923f
-#define YW_INV_TWO_PI_F 0.159154943091895335768f
+#define YW_NORMAL_RANGE_LIMIT_F 8192.0f
 
 static const float S_COEFF_F[] = {
     1.0f,
@@ -18,9 +10,33 @@ static const float S_COEFF_F[] = {
     0.000002752600208985165f
 };
 
+
+static const float YW_TWO_PI_HEAD_F = 6.28318500518798828125f;
+static const float YW_TWO_PI_TAIL_F = 3.02231454903657293876e-7f;
+
+static float payne_hanek_reduce_f(float x) {
+    double x_d = (double)x;
+    double k_d = __builtin_round(x_d * (1.0 / 6.28318530717958647692));
+
+    float res = (float)(x_d - k_d * 6.28318530717958647692);
+
+    return res;
+}
+
 static float normalize_radians_f(float x) {
-    float k = (float)(int)(x * YW_INV_TWO_PI_F + (x >= 0.0f ? 0.5f : -0.5f));
-    return x - k * YW_TWO_PI_F;
+    float abs_x = x < 0.0f ? -x : x;
+
+    if (abs_x <= YW_NORMAL_RANGE_LIMIT_F) {
+        float k = __builtin_roundf(x * YW_INV_TWO_PI_F);
+
+        return (x - k * YW_TWO_PI_HEAD_F) - k * YW_TWO_PI_TAIL_F;
+    }
+
+    if (abs_x != abs_x || abs_x > 3.402823466e+38f) {
+        return 0.0f / 0.0f;
+    }
+
+    return payne_hanek_reduce_f(x);
 }
 
 float yw_math_sinf(float x) {
@@ -58,8 +74,21 @@ float yw_math_sqrtf(float x) {
 }
 
 yw_sincosf_result yw_math_sincosf(float x) {
-    float s = yw_math_sinf(x);
+    x = normalize_radians_f(x);
+
+    if (x > YW_HALF_PI_F) {
+        x = YW_PI_F - x;
+    } else if (x < -YW_HALF_PI_F) {
+        x = -YW_PI_F - x;
+    }
+
+    float x2 = x * x;
+
+    float sin_poly = S_COEFF_F[0] + x2 * (S_COEFF_F[1] + x2 * (S_COEFF_F[2] + x2 * (S_COEFF_F[3] + x2 * S_COEFF_F[4])));
+    float s = x * sin_poly;
+
     float c = yw_math_cosf(x);
+
     return (yw_sincosf_result){ .sin = s, .cos = c };
 }
 
