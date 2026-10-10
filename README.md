@@ -58,7 +58,7 @@
 
 ```bash
 # 1. Clone the repository
-git clone [https://github.com/KoHaRxnP/libyw.git](https://github.com/KoHaRxnP/libyw.git)
+git clone https://github.com/libyw/libyw.git
 cd libyw
 
 # 2. Configure build files
